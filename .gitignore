@@ -50,3 +50,16 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# STM32 related
+*.ioc
+*.launch
+*.ld
+.settings
+.cproject
+.project
+.mxproject
+Debug
+Drivers
+Middlewares
+TOUCHSENSING
