@@ -22,7 +22,7 @@
 HAL_StatusTypeDef displayInit(SSD1306Display * ssd1306);
 HAL_StatusTypeDef bootLogo(SSD1306Display * ssd1306);
 HAL_StatusTypeDef clearDisplay(SSD1306Display * ssd1306);
-HAL_StatusTypeDef writeTemp(SSD1306Display * ssd1306, float temperature);
+HAL_StatusTypeDef writeTemp(SSD1306Display * ssd1306, float temperature, uint8_t is_humidity);
 HAL_StatusTypeDef drawBar(SSD1306Display * ssd1306, uint8_t percentage);
 
 
