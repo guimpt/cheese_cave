@@ -26,7 +26,7 @@ HAL_StatusTypeDef displayGlyph(SSD1306Display * ssd1306, const uint8_t * glyph, 
 	return HAL_OK;
 }
 
-HAL_StatusTypeDef writeTemp(SSD1306Display * ssd1306, float temperature){
+HAL_StatusTypeDef writeTemp(SSD1306Display * ssd1306, float temperature, uint8_t is_humidity){
 
 	// Clear display
 	for (uint8_t p = 0; p < SSD1306_PAGES; p++){
@@ -62,8 +62,14 @@ HAL_StatusTypeDef writeTemp(SSD1306Display * ssd1306, float temperature){
 		text[4] = decimalPart + INT_TO_CHAR;
 	}
 
-	text[5] = 'd';
-	text[6] = 'C';
+	if (is_humidity){
+		text[5] = ' ';
+		text[6] = 'p';
+	}
+	else{
+		text[5] = 'd';
+		text[6] = 'C';
+	}
 
 	uint8_t w[] = {L_SPACE, L_SPACE + DIG_SPACE, L_SPACE + 2*DIG_SPACE, L_SPACE + 2*DIG_SPACE + DOT_SPACE
 			, L_SPACE + 3*DIG_SPACE + DOT_SPACE, L_SPACE + 4*DIG_SPACE + DOT_SPACE

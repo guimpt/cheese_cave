@@ -77,11 +77,13 @@ PT100 pt100;
 NTC ntc;
 PID pid;
 
-float target_temp = 10.0f;
-uint8_t int_target = 100;
+float target_temp;
+uint8_t int_target;
 float filt_temp;
 uint32_t last_target_change = 0;
+uint32_t light_press_start = 0;
 uint8_t update_display;
+uint8_t show_sh30 = 0;
 
 TSL_StateId_enum_T last_states[3];
 TSL_StateId_enum_T new_states[3];
@@ -157,6 +159,13 @@ int main(void)
 
   HAL_ADCEx_Calibration_Start(analog.adc_handle);
 
+  // Get temperature from NVM
+  int_target = (uint8_t)*((uint16_t*)NVM_BASE_ADDRESS);
+  if (*((uint16_t*)NVM_BASE_ADDRESS) == 0xFFFF){
+	  int_target = 100;
+  }
+  target_temp = (float)int_target / 10.0 + 0.005;
+
 
   // PWM
   htim1.Instance->CCR1 = 1023;
@@ -202,7 +211,7 @@ int main(void)
 	  first_loop = 0;
 
 	  // Loop update
-	  pid.xp_k = (int32_t)((target_temp - pt100.temperature) * (float)MULTIPLIER);
+	  pid.xp_k = (int32_t)((target_temp - filt_temp) * (float)MULTIPLIER);
 	  pidLoop_Update(&pid);
 	  htim1.Instance->CCR1 = 1023 - pid.y_k / MULTIPLIER;
 
@@ -579,6 +588,14 @@ void user_interface(void){
 	if((new_states[0] == TSL_STATEID_DETECT) && (new_states[0] != last_states[0])){
 		// LED key
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		light_press_start = HAL_GetTick();
+	}
+	else if ((new_states[0] != TSL_STATEID_DETECT) && (last_states[0] == TSL_STATEID_DETECT)){
+		if ((HAL_GetTick() - light_press_start) > 5000){
+			show_sh30 = 1;
+			last_target_change = HAL_GetTick();
+			update_display = 1;
+		}
 	}
 	else if((new_states[1] == TSL_STATEID_DETECT) && (new_states[1] != last_states[1])){
 		// DOWN key
@@ -602,13 +619,43 @@ void user_interface(void){
 	// Update display
 	if (update_display){
 		update_display = 0;
+		// Save to NVM
+	    FLASH_EraseInitTypeDef flash_erase_struct;
+	    uint32_t error_status;
+	    HAL_FLASH_Unlock();
+
+	    flash_erase_struct.TypeErase = FLASH_TYPEERASE_PAGES;
+	    flash_erase_struct.PageAddress = NVM_BASE_ADDRESS;
+	    flash_erase_struct.NbPages = 1;
+
+	    HAL_FLASHEx_Erase(&flash_erase_struct, &error_status);
+
+	    HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, NVM_BASE_ADDRESS, (uint16_t)int_target);
+
+	    HAL_FLASH_Lock();
+
 		if ((HAL_GetTick() - last_target_change) < 2000){
-			writeTemp(&ssd1306, target_temp);
-			ssd1306UpdateDisplay(&ssd1306);
-			ssd1306SetContrast(&ssd1306, 100);
+			if (show_sh30){
+				if ((HAL_GetTick() - last_target_change) < 1000) {
+					writeTemp(&ssd1306, sh30.humidity, 1);
+					ssd1306UpdateDisplay(&ssd1306);
+					ssd1306SetContrast(&ssd1306, 100);
+				}
+				else {
+					writeTemp(&ssd1306, sh30.temperature, 0);
+					ssd1306UpdateDisplay(&ssd1306);
+					ssd1306SetContrast(&ssd1306, 100);
+				}
+			}
+			else{
+				writeTemp(&ssd1306, target_temp, 0);
+				ssd1306UpdateDisplay(&ssd1306);
+				ssd1306SetContrast(&ssd1306, 100);
+			}
 		}
 		else {
-			writeTemp(&ssd1306, filt_temp);
+			show_sh30 = 0;
+			writeTemp(&ssd1306, filt_temp, 0);
 			drawBar(&ssd1306, (pid.y_k / MULTIPLIER)/10);
 			ssd1306UpdateDisplay(&ssd1306);
 			ssd1306SetContrast(&ssd1306, 10);

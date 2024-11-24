@@ -85,6 +85,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 #define VREFINT_CAL_ADDRESS 0x1FFFF7BA
 #define PWM_CTRL_CHANNEL	TIM_CHANNEL_1
+#define NVM_BASE_ADDRESS	0x08007C00UL
 
 typedef struct {
 	// ADC handle
