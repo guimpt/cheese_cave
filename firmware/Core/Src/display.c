@@ -64,7 +64,7 @@ HAL_StatusTypeDef writeTemp(SSD1306Display * ssd1306, float temperature, uint8_t
 
 	if (is_humidity){
 		text[5] = ' ';
-		text[6] = ' ';
+		text[6] = 'p';
 	}
 	else{
 		text[5] = 'd';

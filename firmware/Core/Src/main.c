@@ -164,7 +164,7 @@ int main(void)
   if (*((uint16_t*)NVM_BASE_ADDRESS) == 0xFFFF){
 	  int_target = 100;
   }
-  float target_temp = (float)int_target / 10.0 + 0.005;
+  target_temp = (float)int_target / 10.0 + 0.005;
 
 
   // PWM
@@ -211,7 +211,7 @@ int main(void)
 	  first_loop = 0;
 
 	  // Loop update
-	  pid.xp_k = (int32_t)((target_temp - pt100.temperature) * (float)MULTIPLIER);
+	  pid.xp_k = (int32_t)((target_temp - filt_temp) * (float)MULTIPLIER);
 	  pidLoop_Update(&pid);
 	  htim1.Instance->CCR1 = 1023 - pid.y_k / MULTIPLIER;
 
@@ -590,7 +590,7 @@ void user_interface(void){
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 		light_press_start = HAL_GetTick();
 	}
-	else if ((new_states[0] == TSL_STATEID_RELEASE) && (last_states[0] == TSL_STATEID_DETECT)){
+	else if ((new_states[0] != TSL_STATEID_DETECT) && (last_states[0] == TSL_STATEID_DETECT)){
 		if ((HAL_GetTick() - light_press_start) > 5000){
 			show_sh30 = 1;
 			last_target_change = HAL_GetTick();
@@ -636,9 +636,16 @@ void user_interface(void){
 
 		if ((HAL_GetTick() - last_target_change) < 2000){
 			if (show_sh30){
-				writeTemp(&ssd1306, sh30.humidity, 1);
-				ssd1306UpdateDisplay(&ssd1306);
-				ssd1306SetContrast(&ssd1306, 100);
+				if ((HAL_GetTick() - last_target_change) < 1000) {
+					writeTemp(&ssd1306, sh30.humidity, 1);
+					ssd1306UpdateDisplay(&ssd1306);
+					ssd1306SetContrast(&ssd1306, 100);
+				}
+				else {
+					writeTemp(&ssd1306, sh30.temperature, 0);
+					ssd1306UpdateDisplay(&ssd1306);
+					ssd1306SetContrast(&ssd1306, 100);
+				}
 			}
 			else{
 				writeTemp(&ssd1306, target_temp, 0);
